@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>When should I irrigate my land?</title>
+<style>
+:root{--bg:#f2f6f3;--card:#fff;--ink:#1d2b24;--muted:#5c6b64;--line:#dfe6e2;--accent:#1b7f5c;--red:#c0392b;--amber:#d98a00;--blue:#2a6fb0;--green:#2e8b57}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1714;--card:#17211d;--ink:#e9f0ec;--muted:#9db0a7;--line:#2a3832;--accent:#34b58a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{background:linear-gradient(135deg,#145c43,#1b7f5c);color:#fff;padding:26px 18px 22px}
+header h1{margin:0 auto;max-width:900px;font-size:1.7rem;line-height:1.2}
+header p{margin:6px auto 0;max-width:900px;opacity:.92}
+main{max-width:900px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 14px}
+h3{margin:0 0 8px;font-size:1.05rem}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.form .full{grid-column:1/-1}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:3px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:flex;gap:8px}.row>*{flex:1}.row>select{flex:0 0 38%}
+button{font:inherit;border-radius:10px;border:1px solid var(--line);padding:9px 14px;background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;font-size:1.05rem;padding:12px 22px}
+button.hit{display:block;width:100%;text-align:left;margin-top:5px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.msg{margin:10px 0 0;color:var(--muted)}.msg.bad{color:var(--red);font-weight:600}
+.small{font-size:.88rem;color:var(--muted)}
+.answer{border-left:10px solid var(--green)}
+.answer.red{border-left-color:var(--red)}.answer.amber{border-left-color:var(--amber)}.answer.blue{border-left-color:var(--blue)}
+.answer h2{margin:0;font-size:1.9rem;line-height:1.2}
+.answer.red h2{color:var(--red)}.answer.amber h2{color:var(--amber)}.answer.blue h2{color:var(--blue)}.answer.green h2{color:var(--green)}
+.sub{margin:6px 0 0;font-size:1.05rem}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.kv div{background:var(--bg);border-radius:10px;padding:10px}.kv b{display:block;font-size:1.35rem}.kv span{font-size:.8rem;color:var(--muted)}
+.warn{color:var(--red);font-weight:600;margin:12px 0 0}
+.grid2{display:grid;grid-template-columns:1fr 1.3fr;gap:14px}.grid2 .card{margin:0}.grid2{margin-bottom:14px}
+.tankrow{display:flex;gap:14px;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:.92rem}th,td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.dot.g{background:var(--green)}.dot.r{background:var(--red)}
+summary{cursor:pointer;font-weight:700;font-size:1.05rem}.steps{padding-left:20px}.steps li{margin:9px 0}
+#hits{margin-top:6px}.place{font-size:.9rem;color:var(--accent);font-weight:600;margin-top:5px;min-height:1.2em}
+@media (max-width:680px){.form{grid-template-columns:1fr}.kv{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}h1{font-size:1.4rem}.answer h2{font-size:1.5rem}}
+</style>
+</head>
+<body>
+<header><h1>When should I irrigate my land?</h1><p>Tell us your field and crop. We read the weather and tell you whether to irrigate today, or after how many days, and how much water to pump.</p></header>
+<main>
+<section class="card">
+  <div class="form">
+    <div class="full">
+      <label for="q">1. Where is your field? (search a town or village in India)</label>
+      <div class="row"><input id="q" placeholder="e.g. Ludhiana, Patna, Nashik…" autocomplete="off"><button type="button" id="searchBtn" style="flex:0 0 auto">Search</button><button type="button" id="locBtn" style="flex:0 0 auto">📍 Use my location</button></div>
+      <div id="hits"></div><div class="place" id="placeName"></div>
+    </div>
+    <div><label for="lat">Latitude (°N)</label><input id="lat" type="number" step="0.001" placeholder="e.g. 30.90"></div>
+    <div><label for="lon">Longitude (°E)</label><input id="lon" type="number" step="0.001" placeholder="e.g. 75.85"></div>
+    <div><label for="crop">2. Crop</label><select id="crop"></select></div>
+    <div id="daysBox"><label id="lblDays" for="cropDays">Days from sowing to harvest (change for your variety)</label><input id="cropDays" type="number" min="60" max="420"></div>
+    <div class="full small" id="cropNote"></div>
+    <div id="sowBox"><label id="lblSow" for="sow">3. Sowing date</label><input id="sow" type="date"></div>
+    <div><label id="lblWet" for="lastWet">When was the field last irrigated, or well soaked by rain?</label><input id="lastWet" type="date"></div>
+    <div><label for="soil">4. Soil</label><select id="soil"></select></div>
+    <div id="methodBox"><label for="method">Irrigation method</label><select id="method"></select></div>
+    <div id="mgmtBox" style="display:none"><label for="mgmt">Water management</label><select id="mgmt"></select></div>
+    <div><label for="area">5. Field area</label><div class="row"><input id="area" type="number" min="0.01" step="0.01" value="1"><select id="areaUnit"><option value="ha">hectare</option><option value="acre">acre</option></select></div></div>
+    <div><label for="flow">Pump flow (to know the pumping time)</label><div class="row"><input id="flow" type="number" min="0" step="0.5" value="30"><select id="flowUnit"><option value="m3h">m³/hour</option><option value="lpm">litres/min</option></select></div></div>
+    <div class="full btns"><button type="button" class="primary" id="go">Get advice</button></div>
+  </div>
+  <p class="msg" id="msg"></p>
+</section>
+<section id="result" hidden></section>
+</main>
+<script>
+/*MODEL_START*/
+// ---------------------------------------------------------------------------------------------
+// THE WHOLE MODEL (a daily soil-water "bucket")
+// Sources: FAO Irrigation and Drainage Paper 56 (Allen et al., 1998): crop coefficients Kc (Table 12),
+// growth-stage lengths (Table 11), rooting depth and the depletion limit p (Table 22), soil water capacity (Table 19).
+// Irrigation efficiencies and the 'upper two-thirds of the roots' rule: Irrigation Scheduler user guide.
+// ---------------------------------------------------------------------------------------------
+// L = FAO-56 Table 11 stage lengths (initial, development, mid, late; the proportions are scaled to the crop length you enter)
+// kc = FAO-56 Table 12 (initial, mid, end); zmax = low end of the Table 22 rooting range (FAO: use the smaller values for
+// irrigation scheduling); p = Table 22 depletion fraction; days = default crop length; src = where days and L come from.
+const CROPS = {
+  wheat:     { label: 'Wheat', group: 'Cereals and millets',               days: 130, L: [15, 25, 50, 30],   kc: [0.30, 1.15, 0.25], zmin: 0.3, zmax: 1.0, p: 0.55, src: 'Stages: FAO-56 Table 11, central India row. Length 130 days is our typical value (Indian studies: 108 to 157 days by place and sowing date).' },
+  maize:     { label: 'Maize', group: 'Cereals and millets',               days: 105, L: [20, 35, 40, 30],   kc: [0.30, 1.20, 0.35], zmin: 0.3, zmax: 1.0, p: 0.55, src: 'Stages: FAO-56 Table 11, India row. Length 105 days is our typical value (Indian studies: 92 to 123 days by season).' },
+  sugarcane: { label: 'Sugarcane', group: 'Cash crops',           days: 405, L: [35, 60, 190, 120], kc: [0.40, 1.25, 0.75], zmin: 0.3, zmax: 1.2, p: 0.65, src: 'Stages and length: FAO-56 Table 11, sugarcane (virgin), low latitudes, 405 days. Ratoon crops are shorter.' },
+  cotton:    { label: 'Cotton', group: 'Cash crops',              days: 195, L: [30, 50, 60, 55],   kc: [0.35, 1.15, 0.60], zmin: 0.3, zmax: 1.0, p: 0.65, src: 'Stages and length: FAO-56 Table 11, Pakistan row, 195 days. Kc mid 1.15 to 1.20 and Kc end 0.70 to 0.50 in Table 12: low end and midpoint used.' },
+  groundnut: { label: 'Groundnut', group: 'Oilseeds',           days: 130, L: [25, 35, 45, 25],   kc: [0.40, 1.15, 0.60], zmin: 0.3, zmax: 0.5, p: 0.50, src: 'Stages and length: FAO-56 Table 11, dry West Africa row, 130 days (semi-arid tropics). Indian varieties are often shorter: change the length.' },
+  soybean:   { label: 'Soybean', group: 'Oilseeds',             days: 85,  L: [15, 15, 40, 15],   kc: [0.40, 1.15, 0.50], zmin: 0.3, zmax: 0.6, p: 0.50, src: 'Stages and length: FAO-56 Table 11, tropics row, 85 days. Many Indian varieties take 90 to 110 days: change the length.' },
+  potato:    { label: 'Potato', group: 'Vegetables',              days: 115, L: [25, 30, 30, 30],   kc: [0.50, 1.15, 0.75], zmin: 0.3, zmax: 0.4, p: 0.35, src: 'Stages and length: FAO-56 Table 11, Jan/Nov (semi-)arid row, 115 days (130 with a longer mid-season).' },
+  pearlmillet:{ label: 'Pearl millet (bajra)', group: 'Cereals and millets', days: 105, L: [15, 25, 40, 25],  kc: [0.30, 1.00, 0.30], zmin: 0.3, zmax: 1.0, p: 0.55, src: 'Stages and length: FAO-56 Table 11, millet, Pakistan (June), 105 days.' },
+  sorghum:   { label: 'Sorghum (jowar)', group: 'Cereals and millets',     days: 130, L: [20, 35, 40, 30],   kc: [0.30, 1.05, 0.55], zmin: 0.3, zmax: 1.0, p: 0.55, src: 'Stages and length: FAO-56 Table 11, sorghum, 130 days. Kc mid 1.00 to 1.10 in Table 12: midpoint used.' },
+  mustard:   { label: 'Mustard / rapeseed', group: 'Oilseeds',  days: 120, L: [35, 55, 60, 40],   kc: [0.35, 1.15, 0.35], zmin: 0.3, zmax: 1.0, p: 0.60, src: 'FAO-56 has no stage row for rapeseed: the safflower row (rabi, arid) gives the proportions. Length 120 days is our typical value (ICAR study: 89 to 129 days across 12 varieties; extension sources: 110 to 140).' },
+  chickpea:  { label: 'Chickpea (gram)', group: 'Pulses',     days: 130, L: [25, 35, 70, 40],   kc: [0.40, 1.00, 0.35], zmin: 0.3, zmax: 0.6, p: 0.50, src: 'FAO-56 has no stage row for chickpea: the lentil row (rabi, arid) gives the proportions. Length 130 days: Hisar (Haryana) maturity 126 to 138 days; PAU kabuli 136 to 163. Peninsular India is shorter.' },
+  ragi:      { label: 'Finger millet (ragi)', group: 'Cereals and millets', days: 110, L: [15, 25, 40, 25], kc: [0.30, 1.00, 0.30], zmin: 0.3, zmax: 1.0, p: 0.55, src: 'FAO-56 has no finger millet row: the millet row gives Kc, roots, depletion and stage proportions. Length 110 days: TNAU medium-duration ragi varieties take 105 to 120 days (range 85 to 135).' },
+  greengram: { label: 'Green gram (moong)',  group: 'Pulses', days: 65, L: [20, 30, 30, 20], kc: [0.40, 1.05, 0.35], zmin: 0.3, zmax: 0.6, p: 0.45, src: 'FAO-56 green gram and cowpeas (Kc end 0.35 is for a dry harvest). Stage proportions: FAO row. Length 65 days: TNAU greengram varieties take 65 to 70 days.' },
+  sunflower: { label: 'Sunflower',           group: 'Oilseeds', days: 90, L: [25, 35, 45, 25], kc: [0.35, 1.15, 0.35], zmin: 0.3, zmax: 0.8, p: 0.45, src: 'FAO-56 sunflower (Kc mid 1.0 to 1.15: the top of the range, for an irrigated dense crop). Stage proportions: FAO row. Length 90 days: TNAU sunflower varieties take 90 to 95 days.' },
+  sesame:    { label: 'Sesame (gingelly)',   group: 'Oilseeds', days: 100, L: [20, 30, 40, 20], kc: [0.35, 1.10, 0.25], zmin: 0.3, zmax: 1.0, p: 0.60, src: 'Stages and length: FAO-56 Table 11 sesame row (China, June), 100 days. Indian varieties are often shorter: change the length.' },
+  castor:    { label: 'Castor',              group: 'Oilseeds', days: 180, L: [25, 40, 65, 50], kc: [0.35, 1.15, 0.55], zmin: 0.3, zmax: 1.0, p: 0.50, src: 'Stages and length: FAO-56 Table 11 castor bean row (March, semi-arid), 180 days.' },
+  tomato:    { label: 'Tomato',              group: 'Vegetables', days: 135, L: [30, 40, 40, 25], kc: [0.60, 1.15, 0.80], zmin: 0.3, zmax: 0.7, p: 0.40, src: 'Stages and length: FAO-56 Table 11 tomato, January arid row, 135 days. Kc mid is 1.20 for staked tomato; Kc end 0.70 to 0.90: midpoint used.' },
+  chilli:    { label: 'Chilli (sweet-pepper proxy)', group: 'Vegetables', days: 125, L: [30, 35, 40, 20], kc: [0.60, 1.05, 0.90], zmin: 0.3, zmax: 0.5, p: 0.30, src: 'PROXY: FAO-56 has no chilli row, so sweet pepper (bell) is used for Kc, roots, depletion and stages (125 days). Chilli is picked over a longer period: raise the length.' },
+  onion:     { label: 'Onion',               group: 'Vegetables', days: 150, L: [15, 25, 70, 40], kc: [0.70, 1.05, 0.75], zmin: 0.3, zmax: 0.3, p: 0.30, src: 'FAO-56 onion (dry); stages and length: Table 11 April Mediterranean row, 150 days. Indian onions often take 110 to 150 days. Roots are shallow, so irrigations are frequent.' },
+  brinjal:   { label: 'Brinjal (eggplant)',  group: 'Vegetables', days: 130, L: [30, 40, 40, 20], kc: [0.60, 1.05, 0.90], zmin: 0.3, zmax: 0.7, p: 0.45, src: 'Stages and length: FAO-56 Table 11 egg plant, October arid row, 130 days.' },
+  banana:    { label: 'Banana (first year)', group: 'Fruit and plantation', days: 390, L: [120, 90, 120, 60], kc: [0.50, 1.10, 1.00], zmin: 0.3, zmax: 0.5, p: 0.35, src: 'Stages and length: FAO-56 Table 11 banana, first year, 390 days (Mediterranean row). Ratoon crops and Indian varieties differ.' },
+  rice:      { label: 'Rice (paddy)', group: 'Cereals and millets', paddy: true, days: 110, L: [30, 30, 60, 30], kc: [1.05, 1.20, 0.75], zmin: 0.3, zmax: 0.3, p: 0, src: 'Rice is grown in standing water, so it uses the paddy model (water depth, not a soil bucket). Kc 1.05 / 1.20 / 0.90 to 0.60 (midpoint 0.75) and stage proportions 30/30/60/30: FAO-56 Tables 11 and 12. Length 110 days FROM TRANSPLANTING: TNAU medium-duration varieties take 130 to 135 days from sowing, minus a 20 to 25 day nursery. Short varieties (about 85 days) and long ones (about 120) differ: change the length.' },
+  coconut:   { label: 'Coconut (mature palms)', group: 'Fruit and plantation', perennial: true, days: 365, L: [1, 1, 1, 1], kc: [1.00, 1.00, 1.00], zmin: 0.7, zmax: 0.7, p: 0.65, src: 'FAO-56 palm trees (Kc 0.95 to 1.00, taken as 1.00 for mature palms; roots 0.7 m, the low end of 0.7 to 1.1; p 0.65). Mature trees use water all year: no sowing date. FAO has no coconut-specific row.' }
+};
+// plant-available water per metre of soil. Loamy sand 90, silt 170 and silty clay 120 are from FAO-56 Example 36 (Table 19);
+// sandy loam, loam, silt loam and clay come from a standard irrigation-textbook table (field capacity minus wilting point).
+const SOILS = {
+  sandy:     { label: 'Sandy (light)',                awc: 90,  perc: 8 },
+  sandyloam: { label: 'Sandy loam',                   awc: 120, perc: 6 },
+  loam:      { label: 'Loam (medium)',                awc: 150, perc: 5 },
+  siltloam:  { label: 'Silt loam (common in the Indo-Gangetic plain)', awc: 180, perc: 5 },
+  clay:      { label: 'Clay (heavy)',                 awc: 120, perc: 2 }
+};
+const METHODS = {
+  flood:     { label: 'Flood / furrow / basin', eff: 0.65 },
+  sprinkler: { label: 'Sprinkler',              eff: 0.80 },
+  drip:      { label: 'Drip',                   eff: 0.90 }
+};
+const HORIZON = 7;        // days ahead
+const ROOT_SHARE = 0.67;  // the bucket is the upper two-thirds of the root zone, where most roots drink (Irrigation Scheduler guide; FAO-29 root distribution)
+
+function dayNum(s) { const a = s.split('-').map(Number); return Date.UTC(a[0], a[1] - 1, a[2]) / 86400000; }
+function addDays(s, n) { return new Date((dayNum(s) + n) * 86400000).toISOString().slice(0, 10); }
+
+// the four growth stages in days (initial, development, mid-season, late), scaled to the crop's total length
+function stageDays(crop, total) {
+  const sum = crop.L.reduce((a, b) => a + b, 0);
+  const L = crop.L.map(x => Math.round(total * x / sum));
+  L[3] = total - L[0] - L[1] - L[2];
+  return L;
+}
+// crop coefficient: flat, rising, flat, falling (FAO-56 Figure 25)
+function kcAt(das, L, K) {
+  if (das <= L[0]) return K[0];
+  if (das <= L[0] + L[1]) return K[0] + (K[1] - K[0]) * (das - L[0]) / L[1];
+  if (das <= L[0] + L[1] + L[2]) return K[1];
+  return K[1] + (K[2] - K[1]) * (das - L[0] - L[1] - L[2]) / L[3];
+}
+// roots deepen from 0.3 m to 1.0 m until the crop has grown fully
+function rootDepth(das, crop, L) { return crop.zmin + (crop.zmax - crop.zmin) * Math.min(1, das / (L[0] + L[1])); }
+
+// wx = [{date, rain, et0}] daily, from the last wetting to today + HORIZON
+function simulate(inp, wx) {
+  const crop = CROPS[inp.crop], days = inp.cropDays || crop.days, L = stageDays(crop, days), awc = SOILS[inp.soil].awc;
+  const start = crop.perennial ? inp.lastWet : (dayNum(inp.lastWet) > dayNum(inp.sow) ? inp.lastWet : inp.sow);
+  let dep = 0;                                  // depletion: how many mm the bucket is below full
+  const rows = [];
+  for (const w of wx) {
+    if (dayNum(w.date) < dayNum(start)) continue;
+    const das = crop.perennial ? dayNum(w.date) - dayNum(start) + 1 : dayNum(w.date) - dayNum(inp.sow) + 1;
+    if (das < 1) continue;
+    const zr = crop.perennial ? crop.zmax : rootDepth(das, crop, L), taw = awc * zr * ROOT_SHARE, raw = crop.p * taw;   // bucket size and the 'irrigate' line
+    const kc = crop.perennial ? crop.kc[1] : kcAt(das, L, crop.kc), etc = kc * w.et0;                       // what the crop drinks today
+    dep = dep + etc - w.rain;                                                // drinks more, rain refills
+    const drain = Math.max(0, -dep);                                          // rain beyond a full bucket drains away
+    dep = Math.min(Math.max(dep, 0), taw);
+    rows.push({ date: w.date, das, zr, taw, raw, kc, et0: w.et0, rain: w.rain, etc, dep, drain });
+  }
+  return { rows, L, days, awc };
+}
+
+function advise(inp, sim, today) {
+  const rows = sim.rows, ti = rows.findIndex(r => r.date === today);
+  const perennial = !!CROPS[inp.crop].perennial;
+  if (!perennial && dayNum(today) < dayNum(inp.sow)) return { status: 'notsown' };
+  if (!perennial && dayNum(today) > dayNum(inp.sow) + sim.days - 1) return { status: 'over' };
+  if (ti < 0) return { status: 'noweather' };
+  const t = rows[ti], eff = METHODS[inp.method].eff;
+  const out = { status: 'ok', today: t, eff, depStartToday: ti > 0 ? rows[ti - 1].dep : 0, answer: 'none', k: -1 };
+  out.overdueDays = rows.slice(0, ti).filter(r => r.dep >= r.raw).length;     // days already past the limit
+  for (let i = ti; i < rows.length; i++) if (rows[i].dep >= rows[i].raw) { out.k = i; break; }
+  if (out.k >= 0) {
+    const r = rows[out.k];
+    out.inDays = out.k - ti; out.date = r.date;
+    out.net = r.dep; out.gross = r.dep / eff;
+    out.volume = out.gross * 10 * inp.areaHa;                                 // 1 mm over 1 ha = 10 m3
+    out.hours = inp.flowM3h > 0 ? out.volume / inp.flowM3h : null;
+    out.answer = out.inDays === 0 ? 'today' : 'later';
+    for (let j = out.k + 1; j <= Math.min(out.k + 2, rows.length - 1); j++)   // rain in the next two days that refills it?
+      if (rows[j].rain > 0 && rows[j].dep < rows[j].raw) { out.answer = 'hold'; out.holdDate = rows[j].date; out.holdRain = rows[j].rain; break; }
+  }
+  out.pctLeft = 100 * (1 - t.dep / t.taw); out.pctTrigger = 100 * (1 - CROPS[inp.crop].p);
+  out.rain7 = rows.slice(ti, ti + HORIZON).reduce((a, r) => a + r.rain, 0);
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// PADDY RICE: the field is a tank of standing water (mm above the soil surface; negative = water level below the surface)
+// Each day: + rain - crop use (Kc x ET0) - seepage and percolation (only while water stands) ; water above the bund overflows.
+// Sources: FAO-56 (Kc); FAO Irrigation Water Management Training Manuals 3 and 4 (puddling 200 mm; seepage and percolation
+// 2 mm/day heavy clay, about 5 average, 8 sandy); TNAU rice irrigation (irrigate one day after the ponded water disappears,
+// re-flood to 5 cm, 2 cm at transplanting); IRRI 'safe AWD' and ICAR-CRRI Technology Bulletin 249 (irrigate when the water is
+// 15 cm below the surface, re-flood to 5 cm; start 1 to 2 weeks after transplanting; keep flooded around flowering).
+// OUR assumptions: bunds hold 100 mm; 15 cm below the surface is treated as 15 mm of water (about 10% drainable pore space);
+// flowering is taken as 55% to 75% of the crop length; no irrigation in the last 10 days before harvest (field drained).
+// ---------------------------------------------------------------------------------------------
+const PADDY = { target: 50, maxDepth: 100, awdAllow: 15, floodedStart: 14, flowerFrom: 0.55, flowerTo: 0.75, drainDays: 10, puddlingMm: 200 };
+const MGMT = { flood: { label: 'Keep the field flooded (standard)' }, awd: { label: 'Alternate wetting and drying (saves water)' } };
+
+// the water level at which to irrigate (end of day), for a management style
+function paddyTrigger(mode, das, days) {
+  if (mode === 'flood') return 0;                                        // ponded water has gone
+  const flowering = das >= PADDY.flowerFrom * days && das <= PADDY.flowerTo * days;
+  if (das <= PADDY.floodedStart || flowering) return 0;                  // keep flooded early on and around flowering
+  return -PADDY.awdAllow;
+}
+// wx: daily weather; start from the later of transplanting and the last flooding; auto = irrigate whenever the trigger is hit
+function simulatePaddy(inp, wx, auto, modeOverride) {
+  const crop = CROPS.rice, days = inp.cropDays || crop.days, L = stageDays(crop, days), perc = SOILS[inp.soil].perc, mode = modeOverride || inp.mgmt;
+  const start = dayNum(inp.lastWet) > dayNum(inp.sow) ? inp.lastWet : inp.sow;
+  let h = PADDY.target, pend = false, total = 0, count = 0; const rows = [];
+  for (const w of wx) {
+    if (dayNum(w.date) < dayNum(start)) continue;
+    const das = dayNum(w.date) - dayNum(inp.sow) + 1;
+    if (das < 1) continue;
+    let irr = 0;
+    if (pend) { irr = PADDY.target - h; h = PADDY.target; pend = false; total += irr; count++; }
+    const kc = kcAt(das, L, crop.kc), etc = kc * w.et0, h1 = h + w.rain, seep = Math.min(perc, Math.max(h1, 0));
+    let h2 = h1 - seep - etc; const spill = Math.max(0, h2 - PADDY.maxDepth); h2 = Math.min(h2, PADDY.maxDepth);
+    const trig = paddyTrigger(mode, das, days);
+    rows.push({ date: w.date, das, kc, et0: w.et0, rain: w.rain, etc, seep, h: h2, spill, irr, trig });
+    h = h2;
+    if (auto && h <= trig && das <= days - PADDY.drainDays) pend = true;
+  }
+  return { rows, L, days, perc, total, count };
+}
+function advisePaddy(inp, sim, today, wxAll) {
+  const rows = sim.rows, ti = rows.findIndex(r => r.date === today), eff = METHODS.flood.eff;
+  if (dayNum(today) < dayNum(inp.sow)) return { status: 'notplanted', puddleMm: PADDY.puddlingMm, puddleM3: PADDY.puddlingMm * 10 * inp.areaHa, puddleHours: inp.flowM3h > 0 ? PADDY.puddlingMm * 10 * inp.areaHa / inp.flowM3h : null };
+  if (dayNum(today) > dayNum(inp.sow) + sim.days - 1) return { status: 'over' };
+  if (ti < 0) return { status: 'noweather' };
+  const t = rows[ti], out = { status: 'ok', paddy: true, today: t, eff, answer: 'none', k: -1 };
+  out.overdueDays = rows.slice(0, ti).filter(r => r.h <= r.trig).length;
+  for (let i = ti; i < rows.length; i++) if (rows[i].h <= rows[i].trig && rows[i].das <= sim.days - PADDY.drainDays) { out.k = i; break; }
+  if (out.k >= 0) {
+    const r = rows[out.k]; out.inDays = out.k - ti; out.date = r.date;
+    out.net = PADDY.target - r.h; out.gross = out.net / eff; out.volume = out.gross * 10 * inp.areaHa;
+    out.hours = inp.flowM3h > 0 ? out.volume / inp.flowM3h : null; out.answer = out.inDays === 0 ? 'today' : 'later';
+    for (let j = out.k + 1; j <= Math.min(out.k + 2, rows.length - 1); j++)
+      if (rows[j].rain > 0 && rows[j].h > rows[j].trig) { out.answer = 'hold'; out.holdDate = rows[j].date; out.holdRain = rows[j].rain; break; }
+  }
+  out.rain7 = rows.slice(ti, ti + HORIZON).reduce((a, r) => a + r.rain, 0);
+  // what AWD would save for this field: both styles irrigate automatically from transplanting to the end of the forecast
+  if (wxAll) {
+    const fromPlanting = { ...inp, lastWet: inp.sow }, wxP = wxAll.filter(w => dayNum(w.date) >= dayNum(inp.sow));   // same start for both styles
+    const a = simulatePaddy(fromPlanting, wxP, true, 'flood'), b = simulatePaddy(fromPlanting, wxP, true, 'awd');
+    const fl = a.total, aw = b.total;
+    out.compare = { floodMm: fl, awdMm: aw, floodN: a.count, awdN: b.count, days: a.rows.length, savingPct: fl > 0 ? 100 * (fl - aw) / fl : null };
+  }
+  return out;
+}
+/*MODEL_END*/
+</script>
+<script>
+// ------------------------------------------------------------------ the page (everything below only draws)
+const $ = id => document.getElementById(id);
+const fmt = (x, d) => (x === null || x === undefined || isNaN(x)) ? '–' : Number(x).toFixed(d === undefined ? 0 : d);
+function todayStr() { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+function shortDate(s) { return new Date(dayNum(s) * 86400000).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }); }
+function stageName(das, L) { return das <= L[0] ? 'initial' : das <= L[0] + L[1] ? 'rapid growth' : das <= L[0] + L[1] + L[2] ? 'mid-season' : 'late season'; }
+function hm(h) { if (h === null || isNaN(h)) return '–'; const m = Math.round(h * 60); return Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') + ' min'; }
+
+// ---- pictures (SVG strings) --------------------------------------------------------------------------
+const PAL = { soil: '#a67c52', water: '#6fa8dc', waterEdge: '#1f4e79', line: '#d62728', tank: '#2b2b2b', grid: '#d9d9d9', text: '#555', ok: '#2ca02c', bg: '#ffffff' };
+function chartSVG(sim, adv, today, c) {
+  const rows = sim.rows.filter(r => dayNum(r.date) >= dayNum(today) - 21);
+  const W = 680, H = 290, L = 54, R = 14, T = 30, B = 36, n = rows.length;
+  const ymax = Math.ceil(Math.max(...rows.map(r => r.taw)) * 1.08 / 20) * 20;
+  const x = i => L + (W - L - R) * i / Math.max(1, n - 1), y = v => T + (H - T - B) * v / ymax;
+  const ti = rows.findIndex(r => r.date === today);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Soil water over time" style="width:100%;height:auto;font:12px system-ui,sans-serif">`;
+  for (let v = 0; v <= ymax; v += 20) s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${c.grid}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="${c.text}">${v === 0 ? 'full' : v}</text>`;
+  const top = rows.map((r, i) => `${x(i)},${y(r.dep)}`), bot = rows.map((r, i) => `${x(i)},${y(r.taw)}`).reverse();
+  s += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${c.water}" fill-opacity="0.55"/>`;
+  s += `<polyline points="${rows.map((r, i) => `${x(i)},${y(r.taw)}`).join(' ')}" fill="none" stroke="${c.tank}" stroke-width="2"/>`;
+  s += `<polyline points="${rows.map((r, i) => `${x(i)},${y(r.raw)}`).join(' ')}" fill="none" stroke="${c.line}" stroke-width="2" stroke-dasharray="6 4"/>`;
+  s += `<polyline points="${top.slice(0, ti + 1).join(' ')}" fill="none" stroke="${c.waterEdge}" stroke-width="2.6"/>`;
+  s += `<polyline points="${top.slice(Math.max(0, ti)).join(' ')}" fill="none" stroke="${c.waterEdge}" stroke-width="2.6" stroke-dasharray="3 5"/>`;
+  if (ti >= 0) s += `<line x1="${x(ti)}" x2="${x(ti)}" y1="${T - 8}" y2="${H - B}" stroke="${c.text}" stroke-dasharray="2 4"/><text x="${x(ti) + 5}" y="${T - 12}" fill="${c.text}">today</text>`;
+  rows.forEach((r, i) => { if (r.rain >= 1) s += `<rect x="${x(i) - 3}" y="${T - 6 - Math.min(r.rain, 40) * 0.5}" width="6" height="${Math.min(r.rain, 40) * 0.5}" fill="${c.water}"/>`; });
+  if (adv && adv.k >= 0 && adv.answer !== 'none') { const i = rows.findIndex(r => r.date === adv.date); if (i >= 0) s += `<circle cx="${x(i)}" cy="${y(rows[i].dep)}" r="7" fill="${adv.answer === 'hold' ? c.text : c.ok}" stroke="#fff" stroke-width="2"/>`; }
+  [0, Math.floor((n - 1) / 3), Math.floor(2 * (n - 1) / 3), n - 1].forEach(i => { s += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle" fill="${c.text}">${shortDate(rows[i].date).replace(/^[A-Za-z]+,? /, '')}</text>`; });
+  s += `<text x="12" y="${(T + H - B) / 2}" transform="rotate(-90 12 ${(T + H - B) / 2})" text-anchor="middle" fill="${c.text}">mm below full</text></svg>`;
+  return s;
+}
+function tankSVG(adv, c) {
+  const Hh = 190, pct = Math.max(0, Math.min(100, adv.pctLeft)), top = 12, h = Hh - top - 8, wy = top + h * (1 - pct / 100), ly = top + h * (1 - adv.pctTrigger / 100);
+  return `<svg viewBox="0 0 180 ${Hh + 16}" role="img" aria-label="Bucket of soil water" style="width:100%;max-width:170px;height:auto;font:12px system-ui,sans-serif">
+    <rect x="30" y="${wy}" width="70" height="${top + h - wy}" fill="${c.water}" fill-opacity="0.75"/>
+    <path d="M30 ${top} V${top + h} H100 V${top}" fill="none" stroke="${c.tank}" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="22" x2="108" y1="${ly}" y2="${ly}" stroke="${c.line}" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <text x="112" y="${ly + 4}" fill="${c.line}">irrigate</text><text x="112" y="${ly + 17}" fill="${c.line}">line</text>
+    <text x="65" y="${top + 28}" text-anchor="middle" fill="${c.tank}" font-size="22" font-weight="700">${fmt(pct)}%</text>
+    <text x="65" y="${Hh + 12}" text-anchor="middle" fill="${c.text}">water left</text></svg>`;
+}
+
+
+// ---- paddy pictures --------------------------------------------------------------------------------
+function fieldSVG(adv, c) {
+  const W = 250, H = 220, top = 16, ymax = 100, ymin = -40, sc = (H - top - 26) / (ymax - ymin), y = v => top + (ymax - v) * sc;
+  const h = Math.max(ymin, Math.min(ymax, adv.today.h)), trig = adv.today.trig;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paddy field water level" style="width:100%;max-width:200px;height:auto;font:12px system-ui,sans-serif">`;
+  s += `<rect x="28" y="${y(0)}" width="96" height="${y(ymin) - y(0)}" fill="${c.soil}" fill-opacity="0.55"/>`;
+  s += h > 0 ? `<rect x="28" y="${y(h)}" width="96" height="${y(0) - y(h)}" fill="${c.water}" fill-opacity="0.8"/>`
+             : `<rect x="28" y="${y(h)}" width="96" height="${y(ymin) - y(h)}" fill="${c.water}" fill-opacity="0.35"/>`;
+  s += `<line x1="22" x2="130" y1="${y(0)}" y2="${y(0)}" stroke="${c.tank}" stroke-width="2.5"/><text x="132" y="${y(0) + 4}" fill="${c.text}">soil surface</text>`;
+  s += `<line x1="22" x2="130" y1="${y(trig)}" y2="${y(trig)}" stroke="${c.line}" stroke-width="2.5" stroke-dasharray="6 4"/><text x="132" y="${y(trig) + (trig === 0 ? 17 : 4)}" fill="${c.line}">irrigate line</text>`;
+  s += `<path d="M28 ${y(ymax)} V${y(ymin)} H124 V${y(ymax)}" fill="none" stroke="${c.tank}" stroke-width="3" stroke-linejoin="round"/>`;
+  s += `<text x="76" y="${y(Math.max(h, 0)) - 6}" text-anchor="middle" fill="${c.tank}" font-size="15" font-weight="700">${fmt(adv.today.h)} mm</text></svg>`;
+  return s;
+}
+function paddyChartSVG(sim, adv, today, c) {
+  const rows = sim.rows.filter(r => dayNum(r.date) >= dayNum(today) - 21);
+  const W = 680, H = 290, L = 54, R = 14, T = 30, B = 36, n = rows.length;
+  const ymax = Math.ceil(Math.max(60, ...rows.map(r => r.h)) * 1.05 / 20) * 20, ymin = Math.floor(Math.min(-20, ...rows.map(r => Math.min(r.h, r.trig))) * 1.05 / 20) * 20;
+  const x = i => L + (W - L - R) * i / Math.max(1, n - 1), y = v => T + (H - T - B) * (ymax - v) / (ymax - ymin), ti = rows.findIndex(r => r.date === today);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Water level in the paddy over time" style="width:100%;height:auto;font:12px system-ui,sans-serif">`;
+  s += `<rect x="${L}" y="${y(0)}" width="${W - L - R}" height="${y(ymin) - y(0)}" fill="${c.soil}" fill-opacity="0.25"/>`;
+  for (let v = ymin; v <= ymax; v += 20) s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${c.grid}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="${c.text}">${v}</text>`;
+  const pts = rows.map((r, i) => `${x(i)},${y(Math.max(r.h, 0))}`).join(' '), base = rows.map((r, i) => `${x(i)},${y(0)}`).reverse().join(' ');
+  s += `<polygon points="${pts} ${base}" fill="${c.water}" fill-opacity="0.6"/>`;
+  s += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="${c.tank}" stroke-width="2"/><text x="${W - R - 4}" y="${y(0) - 5}" text-anchor="end" fill="${c.text}">soil surface</text>`;
+  s += `<polyline points="${rows.map((r, i) => `${x(i)},${y(r.trig)}`).join(' ')}" fill="none" stroke="${c.line}" stroke-width="2" stroke-dasharray="6 4"/><text x="${L + 6}" y="${y(rows[0].trig) + 15}" fill="${c.line}">irrigate line</text>`;
+  const line = rows.map((r, i) => `${x(i)},${y(r.h)}`);
+  s += `<polyline points="${line.slice(0, ti + 1).join(' ')}" fill="none" stroke="${c.waterEdge}" stroke-width="2.6"/><polyline points="${line.slice(Math.max(0, ti)).join(' ')}" fill="none" stroke="${c.waterEdge}" stroke-width="2.6" stroke-dasharray="3 5"/>`;
+  if (ti >= 0) s += `<line x1="${x(ti)}" x2="${x(ti)}" y1="${T - 8}" y2="${H - B}" stroke="${c.text}" stroke-dasharray="2 4"/><text x="${x(ti) + 5}" y="${T - 12}" fill="${c.text}">today</text>`;
+  rows.forEach((r, i) => { if (r.rain >= 1) s += `<rect x="${x(i) - 3}" y="${T - 6 - Math.min(r.rain, 40) * 0.5}" width="6" height="${Math.min(r.rain, 40) * 0.5}" fill="${c.water}"/>`; });
+  if (adv && adv.k >= 0 && adv.answer !== 'none') { const i = rows.findIndex(r => r.date === adv.date); if (i >= 0) s += `<circle cx="${x(i)}" cy="${y(rows[i].h)}" r="7" fill="${adv.answer === 'hold' ? c.text : c.ok}" stroke="#fff" stroke-width="2"/>`; }
+  [0, Math.floor((n - 1) / 3), Math.floor(2 * (n - 1) / 3), n - 1].forEach(i => { s += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle" fill="${c.text}">${shortDate(rows[i].date).replace(/^[A-Za-z]+,? /, '')}</text>`; });
+  s += `<text x="12" y="${(T + H - B) / 2}" transform="rotate(-90 12 ${(T + H - B) / 2})" text-anchor="middle" fill="${c.text}">water level (mm)</text></svg>`;
+  return s;
+}
+
+function renderPaddy(inp, sim, adv, meta) {
+  const res = $('result'); res.hidden = false;
+  if (adv.status === 'notplanted') {
+    res.innerHTML = `<div class="card answer blue"><h2>Not transplanted yet</h2><p class="sub">Before transplanting, the field has to be puddled and saturated. FAO puts this at about <b>${PADDY.puddlingMm} mm</b> of water, which is <b>${fmt(adv.puddleM3)} m³</b> for your ${fmt(inp.areaHa, 2)} ha${adv.puddleHours ? `, or about ${hm(adv.puddleHours)} of pumping at ${fmt(inp.flowM3h, 1)} m³/h` : ''}.</p><p class="small">After transplanting, come back and enter the transplanting date and when the field was last flooded: the page will then tell you when to irrigate. Keep about 2 cm of water at transplanting and 5 cm afterwards (TNAU).</p></div>`; return;
+  }
+  if (adv.status !== 'ok') {
+    const m = { over: 'This crop has passed its harvest date: the season is over. Change the transplanting date or crop length.', noweather: 'No weather data came back for today. Try again.' };
+    res.innerHTML = `<div class="card answer blue"><h2>${m[adv.status]}</h2></div>`; return;
+  }
+  const t = adv.today, area = inp.areaHa, c = palette(), crop = CROPS.rice, L = sim.L, ending = t.das > sim.days - PADDY.drainDays, awd = inp.mgmt === 'awd';
+  let cls = 'green', head, sub = '';
+  if (adv.answer === 'today') { cls = 'red'; head = 'Irrigate TODAY'; }
+  else if (adv.answer === 'later') { cls = adv.inDays <= 2 ? 'amber' : 'blue'; head = adv.inDays === 1 ? 'Irrigate TOMORROW' : `Irrigate in ${adv.inDays} days`; sub = shortDate(adv.date); }
+  else if (adv.answer === 'hold') { cls = 'blue'; head = 'Wait: rain is on the way'; sub = `The water would reach the irrigate line around ${shortDate(adv.date)}, but ${fmt(adv.holdRain)} mm of rain is forecast on ${shortDate(adv.holdDate)}. Check again tomorrow.`; }
+  else if (ending) { head = 'No more irrigation: let the field dry for harvest'; sub = `The crop is within ${PADDY.drainDays} days of harvest. Drain the field and stop irrigating.`; }
+  else { head = 'No irrigation needed in the next 7 days'; sub = `The water level stays above the irrigate line. Forecast rain: ${fmt(adv.rain7)} mm.`; }
+  const dose = (adv.answer === 'today' || adv.answer === 'later') ? `<div class="kv"><div><b>${fmt(adv.net)} mm</b><span>to bring the water back to ${PADDY.target} mm</span></div><div><b>${fmt(adv.gross)} mm</b><span>to apply at the pump (${fmt(adv.eff * 100)}% efficiency)</span></div><div><b>${fmt(adv.volume)} m³</b><span>${fmt(adv.volume * 1000).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} litres for ${fmt(area, 2)} ha</span></div><div><b>${hm(adv.hours)}</b><span>pump time</span></div></div>` : '';
+  const warn = adv.overdueDays > 0 ? `<p class="warn">The field has been past its irrigate line for ${adv.overdueDays} day${adv.overdueDays > 1 ? 's' : ''}: the crop may already be short of water.</p>` : '';
+  const cmp = adv.compare;
+  let cmpHtml = '';
+  if (cmp && cmp.days >= 20 && cmp.floodMm > 0) {
+    const sv = cmp.savingPct;
+    const msg = sv <= 0 ? 'For this soil and weather the model finds no saving from AWD: with heavy soil there is little seepage to save, and rain timing decides the rest.'
+      : sv > 45 ? `Rain covers most of the need in this weather, so the saving is bigger than the 15 to 40% seen in trials, which count all water, not only irrigation.`
+      : `Trials in India and Asia report 15 to 40% savings without yield loss (IRRI, ICAR-CRRI).`;
+    cmpHtml = `<div class="card"><h3>Would alternate wetting and drying save water here?</h3><p>Since transplanting (${cmp.days} days to the end of the forecast), the model estimates <b>${fmt(cmp.floodMm)} mm</b> of irrigation in ${cmp.floodN} turns if you keep the field flooded, and <b>${fmt(cmp.awdMm)} mm</b> in ${cmp.awdN} turns with AWD${sv > 0 ? `: about <b>${fmt(sv)}% less</b>` : ''}. ${msg}</p><p class="small">AWD: wait until the water is 15 cm below the soil surface, then re-flood to 5 cm. Keep the field flooded for 2 weeks after transplanting and around flowering. It does not work well in very sandy soils, where the water drops too fast.</p></div>`;
+  }
+  const rows7 = sim.rows.filter(r => dayNum(r.date) >= dayNum(t.date)).slice(0, HORIZON);
+  const table = `<table><thead><tr><th>Day</th><th>Rain</th><th>Crop uses</th><th>Seeps down</th><th>Water level</th></tr></thead><tbody>${rows7.map(r => `<tr><td>${shortDate(r.date)}</td><td>${r.rain >= 0.5 ? fmt(r.rain) + ' mm' : '–'}</td><td>${fmt(r.etc, 1)} mm</td><td>${r.seep > 0 ? fmt(r.seep, 1) + ' mm' : '–'}</td><td><i class="dot ${r.h <= r.trig ? 'r' : 'g'}"></i>${fmt(r.h)} mm</td></tr>`).join('')}</tbody></table>`;
+  const startShown = sim.rows[0].date, soilLabel = SOILS[inp.soil].label.toLowerCase().replace(/ \(.*\)/, '');
+  res.innerHTML = `
+  <div class="card answer ${cls}"><h2>${head}</h2>${sub ? `<p class="sub">${sub}</p>` : ''}${dose}${warn}</div>
+  <div class="grid2">
+    <div class="card"><h3>The paddy field</h3><div class="tankrow">${fieldSVG(adv, c)}<p class="small">Rice stands in water. The level is how many mm of water are above the soil surface (below zero means the water has sunk into the soil). When it reaches the red line it is time to irrigate.</p></div></div>
+    <div class="card"><h3>Next 7 days</h3>${table}</div>
+  </div>
+  ${cmpHtml}
+  <div class="card"><h3>Water level, past and forecast</h3>${paddyChartSVG(sim, adv, t.date, c)}<p class="small">Blue = standing water. Brown area = below the soil surface. Red dashed = irrigate line. Dashed blue = forecast if you do not irrigate. Blue bars on top = rain. Green dot = when to irrigate.</p></div>
+  <details class="card" open><summary>How was this answer worked out?</summary><ol class="steps">
+    <li><b>Weather.</b> Rain and ET₀ (the water a well-watered lawn would lose) for ${meta.place}, from ${shortDate(startShown)} to the next 7 days, from Open-Meteo. ET₀ today: ${fmt(t.et0, 1)} mm.</li>
+    <li><b>How much does the rice drink?</b> Your rice is ${t.das} days after transplanting, in its ${stageName(t.das, L)} stage. Crop factor Kc = ${fmt(t.kc, 2)}, so it uses Kc × ET₀ = ${fmt(t.kc, 2)} × ${fmt(t.et0, 1)} = <b>${fmt(t.etc, 1)} mm today</b>.</li>
+    <li><b>Water also seeps away.</b> While water stands, about <b>${sim.perc} mm a day</b> seeps down through ${soilLabel} soil (FAO training manuals: 2 mm in heavy clay, 5 average, 8 in sandy soil). When the surface is dry, the seepage stops.</li>
+    <li><b>Keeping the books.</b> Right after flooding on ${shortDate(startShown)} the water was ${PADDY.target} mm deep. Every day we add rain and take off crop use and seepage; water above the bund (assumed ${PADDY.maxDepth} mm) overflows. Today the level is <b>${fmt(t.h)} mm</b>${t.h > 0 ? ' of standing water' : ', which is ' + fmt(-t.h) + ' mm below the surface'}.</li>
+    <li><b>Decision.</b> ${awd ? `You chose alternate wetting and drying: irrigate when the water is 15 cm below the soil surface (IRRI “safe AWD”). We count that as ${-t.trig === 0 ? '0' : '−' + PADDY.awdAllow} mm today${t.trig === 0 ? ' (kept flooded for 2 weeks after transplanting and around flowering)' : ''}; 15 cm of soil depth is taken as about 15 mm of water (our assumption).` : `You keep the field flooded: irrigate one day after the standing water has gone (TNAU), so the irrigate line is at 0 mm.`} ${adv.answer === 'none' ? (ending ? 'The crop is about to be harvested, so irrigation stops.' : 'Over the next 7 days the level does not reach that line.') : adv.answer === 'hold' ? 'The line would be reached, but rain right after refills the field, so we wait.' : `The level reaches the line ${adv.inDays === 0 ? 'today' : 'in ' + adv.inDays + ' day' + (adv.inDays > 1 ? 's' : '')}. Re-flood to ${PADDY.target} mm: ${fmt(adv.net)} mm. Only ${fmt(adv.eff * 100)}% of the pumped water reaches the field, so pump ${fmt(adv.net)} ÷ ${adv.eff} = ${fmt(adv.gross)} mm. One mm over one hectare is 10 m³, so ${fmt(adv.gross)} × 10 × ${fmt(area, 2)} ha = <b>${fmt(adv.volume)} m³</b>${inp.flowM3h > 0 ? `, which is ${hm(adv.hours)} at ${fmt(inp.flowM3h, 1)} m³/h` : ''}.`}</li>
+  </ol></details>
+  <div class="card small"><b>What this paddy model leaves out:</b> water for the nursery and for puddling (about ${PADDY.puddlingMm} mm before transplanting), groundwater and shallow water tables that supply water in many rice areas, runoff from neighbouring fields, and differences between varieties. The bund height (${PADDY.maxDepth} mm), the AWD allowance (15 mm) and the flowering window (55 to 75% of the crop length) are our assumptions. It is a decision aid, not a guarantee.<br><b>Sources:</b> FAO-56 (crop factor); FAO Irrigation Water Management Training Manuals 3 and 4 (puddling, seepage); TNAU (flooding practice, durations); IRRI and ICAR-CRRI Technology Bulletin 249 (AWD); Irrigation Scheduler user guide (efficiency); weather: Open-Meteo.</div>`;
+  res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ---- weather ------------------------------------------------------------------------------------------
+async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+async function fetchWeather(lat, lon, startStr, today) {
+  const past = Math.max(1, Math.min(92, dayNum(today) - dayNum(startStr)));
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,et0_fao_evapotranspiration&past_days=${past}&forecast_days=${HORIZON + 1}&timezone=Asia%2FKolkata`;
+  const d = (await getJSON(u)).daily, good = d.et0_fao_evapotranspiration.filter(v => v !== null), mean = good.reduce((a, b) => a + b, 0) / Math.max(1, good.length);
+  return { wx: d.time.map((t, i) => ({ date: t, rain: d.precipitation_sum[i] ?? 0, et0: d.et0_fao_evapotranspiration[i] ?? mean })), today: d.time[past], past, clipped: dayNum(today) - dayNum(startStr) > 92 };
+}
+// ---- rendering ----------------------------------------------------------------------------------------
+function palette() { const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim() || PAL.text; return { ...PAL, text: g('--muted'), grid: g('--line'), tank: g('--ink') }; }
+function render(inp, sim, adv, meta) {
+  const res = $('result'); res.hidden = false;
+  if (adv.status !== 'ok') {
+    const m = { notsown: 'The sowing date is in the future, so there is nothing to irrigate yet.', over: 'This crop has passed its harvest date: the season is over. Change the sowing date or crop length.', noweather: 'No weather data came back for today. Try again.' };
+    res.innerHTML = `<div class="card answer blue"><h2>${m[adv.status]}</h2></div>`; return;
+  }
+  const t = adv.today, area = inp.areaHa, c = palette(), crop = CROPS[inp.crop], L = sim.L;
+  let cls = 'green', head, sub = '';
+  if (adv.answer === 'today') { cls = 'red'; head = 'Irrigate TODAY'; }
+  else if (adv.answer === 'later') { cls = adv.inDays <= 2 ? 'amber' : 'blue'; head = adv.inDays === 1 ? 'Irrigate TOMORROW' : `Irrigate in ${adv.inDays} days`; sub = shortDate(adv.date); }
+  else if (adv.answer === 'hold') { cls = 'blue'; head = 'Wait: rain is on the way'; sub = `The soil would reach its limit around ${shortDate(adv.date)}, but ${fmt(adv.holdRain)} mm of rain is forecast on ${shortDate(adv.holdDate)}. Check again tomorrow.`; }
+  else { head = 'No irrigation needed in the next 7 days'; sub = `The soil still holds enough water. Forecast rain: ${fmt(adv.rain7)} mm.`; }
+  const dose = (adv.answer === 'today' || adv.answer === 'later') ? `<div class="kv"><div><b>${fmt(adv.net)} mm</b><span>water the soil needs</span></div><div><b>${fmt(adv.gross)} mm</b><span>to apply at the pump (${fmt(adv.eff * 100)}% efficiency)</span></div><div><b>${fmt(adv.volume)} m³</b><span>${fmt(adv.volume * 1000).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} litres for ${fmt(area, 2)} ha</span></div><div><b>${hm(adv.hours)}</b><span>pump time</span></div></div>` : '';
+  const warn = adv.overdueDays > 0 ? `<p class="warn">The soil has been past its irrigate line for ${adv.overdueDays} day${adv.overdueDays > 1 ? 's' : ''}: the crop may already be stressed.</p>` : '';
+  const rows7 = sim.rows.filter(r => dayNum(r.date) >= dayNum(t.date)).slice(0, HORIZON);
+  const table = `<table><thead><tr><th>Day</th><th>Rain</th><th>Crop uses</th><th>Water left</th></tr></thead><tbody>${rows7.map(r => `<tr><td>${shortDate(r.date)}</td><td>${r.rain >= 0.5 ? fmt(r.rain) + ' mm' : '–'}</td><td>${fmt(r.etc, 1)} mm</td><td><i class="dot ${r.dep >= r.raw ? 'r' : 'g'}"></i>${fmt(100 * (1 - r.dep / r.taw))}%</td></tr>`).join('')}</tbody></table>`;
+  const startShown = sim.rows[0].date;
+  res.innerHTML = `
+  <div class="card answer ${cls}"><h2>${head}</h2>${sub ? `<p class="sub">${sub}</p>` : ''}${dose}${warn}</div>
+  <div class="grid2">
+    <div class="card"><h3>The soil “bucket”</h3><div class="tankrow">${tankSVG(adv, c)}<p class="small">Your crop’s roots drink from a bucket of soil water. The dashed line is the point where the crop starts to suffer: irrigate before the water drops to it.</p></div></div>
+    <div class="card"><h3>Next 7 days</h3>${table}</div>
+  </div>
+  <div class="card"><h3>Soil water, past and forecast</h3>${chartSVG(sim, adv, t.date, c)}<p class="small">Blue area = water left in the root zone (full at the top). Red dashed = irrigate line. Dashed blue = forecast if you do not irrigate. Blue bars on top = rain. Green dot = when to irrigate.</p></div>
+  <details class="card" open><summary>How was this answer worked out?</summary><ol class="steps">
+    <li><b>Weather.</b> Rain and ET₀ (the water a well-watered lawn would lose) for ${meta.place}, from ${shortDate(startShown)} to the next 7 days, from Open-Meteo. ET₀ today: ${fmt(t.et0, 1)} mm.</li>
+    <li><b>How thirsty is the crop?</b> ${crop.perennial ? `Your ${crop.label.toLowerCase()} are mature, so they use water all year.` : `Your ${crop.label.toLowerCase()} is ${t.das} days old, in its ${stageName(t.das, L)} stage.`} Crop factor Kc = ${fmt(t.kc, 2)}, so it uses Kc × ET₀ = ${fmt(t.kc, 2)} × ${fmt(t.et0, 1)} = <b>${fmt(t.etc, 1)} mm today</b>.</li>
+    <li><b>How big is the bucket?</b> This soil holds about ${sim.awc} mm of usable water per metre. Roots are ${crop.perennial ? 'about ' : ''}${fmt(t.zr, 2)} m deep and we count the upper two-thirds, where most roots drink: ${sim.awc} × ${fmt(t.zr, 2)} × ${ROOT_SHARE} = <b>${fmt(t.taw)} mm</b>. The crop copes until ${fmt(crop.p * 100)}% of it is used, so the irrigate line is at <b>${fmt(t.raw)} mm</b> below full.</li>
+    <li><b>Keeping the books.</b> The bucket was full on ${shortDate(startShown)}. Every day we add what the crop used and take off the rain (a full bucket overflows). Today the bucket is <b>${fmt(t.dep)} mm below full</b>, ${fmt(adv.pctLeft)}% of the water is left.</li>
+    <li><b>Decision.</b> ${adv.answer === 'none' ? 'Over the next 7 days the water never reaches the irrigate line, so no irrigation is needed.' : adv.answer === 'hold' ? 'The line would be reached, but rain right after refills the bucket, so we wait.' : `The water reaches the irrigate line ${adv.inDays === 0 ? 'today' : 'in ' + adv.inDays + ' day' + (adv.inDays > 1 ? 's' : '')}. We refill the ${fmt(adv.net)} mm that is missing. Only ${fmt(adv.eff * 100)}% of the pumped water reaches the roots, so pump ${fmt(adv.net)} ÷ ${adv.eff} = ${fmt(adv.gross)} mm. One mm over one hectare is 10 m³, so ${fmt(adv.gross)} × 10 × ${fmt(area, 2)} ha = <b>${fmt(adv.volume)} m³</b>${inp.flowM3h > 0 ? `, which is ${hm(adv.hours)} at ${fmt(inp.flowM3h, 1)} m³/h` : ''}.`}</li>
+  </ol></details>
+  <div class="card small"><b>What this simple model leaves out:</b> rain running off the field, salty water, groundwater, differences inside the field, and local crop timing (the stage lengths and the crop length are typical values: change the crop length if your variety differs). It is a decision aid, not a guarantee.<br><b>Sources:</b> FAO Irrigation and Drainage Paper 56 (crop factors, stage lengths, roots, 55% limit, soil water capacity); Irrigation Scheduler user guide (efficiencies, upper two-thirds of the roots); weather: Open-Meteo.</div>`;
+  res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ---- reading the form and running -----------------------------------------------------------------------
+function readInputs() {
+  const area = parseFloat($('area').value) * ($('areaUnit').value === 'acre' ? 0.404686 : 1), flow = parseFloat($('flow').value) * ($('flowUnit').value === 'lpm' ? 0.06 : 1);
+  const per = !!CROPS[$('crop').value].perennial, lw = $('lastWet').value;
+  return { crop: $('crop').value, sow: per ? lw : $('sow').value, lastWet: lw || $('sow').value, soil: $('soil').value, method: CROPS[$('crop').value].paddy ? 'flood' : $('method').value, mgmt: $('mgmt').value, cropDays: CROPS[$('crop').value].perennial ? null : (parseInt($('cropDays').value) || null), areaHa: isNaN(area) ? 1 : area, flowM3h: isNaN(flow) ? 0 : flow };
+}
+function setMsg(t, bad) { const m = $('msg'); m.textContent = t || ''; m.className = bad ? 'msg bad' : 'msg'; }
+async function run() {
+  const inp = readInputs(), today = todayStr();
+  if (!inp.sow) { setMsg(CROPS[inp.crop].perennial ? 'Please enter when the field was last irrigated or well soaked by rain.' : 'Please enter the sowing date.', true); return; }
+  if (dayNum(inp.lastWet) < dayNum(inp.sow)) inp.lastWet = inp.sow;
+  setMsg('Getting the weather…');
+  try {
+    const lat = parseFloat($('lat').value), lon = parseFloat($('lon').value);
+    if (isNaN(lat) || isNaN(lon) || lat < 6 || lat > 38 || lon < 68 || lon > 98) { setMsg('Please choose a place in India (search by name, use your location, or type latitude and longitude).', true); return; }
+    const paddy = !!CROPS[inp.crop].paddy;
+    const w = await fetchWeather(lat, lon, paddy ? (dayNum(inp.sow) < dayNum(today) ? inp.sow : inp.lastWet) : inp.lastWet, today), wx = w.wx, tdy = w.today, clipped = w.clipped;
+    const place = $('placeName').textContent || `your field (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)`;
+    if (paddy) { const sim = simulatePaddy(inp, wx, false), adv = advisePaddy(inp, sim, tdy, clipped ? null : wx); renderPaddy(inp, sim, adv, { place }); }
+    else { const sim = simulate(inp, wx), adv = advise(inp, sim, tdy); render(inp, sim, adv, { place }); }
+    setMsg(clipped ? 'Note: weather is only used for the last 92 days, so the “last irrigated” date was moved forward.' : '');
+  } catch (e) { setMsg('Could not get the weather (' + e.message + '). Check the internet connection and try again.', true); }
+}
+async function searchPlace() {
+  const q = $('q').value.trim(); if (!q) return; const box = $('hits'); box.innerHTML = 'Searching…';
+  try {
+    const d = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&country_code=IN&language=en&format=json`);
+    if (!d.results || !d.results.length) { box.innerHTML = 'No place found. Try another spelling, or type the latitude and longitude.'; return; }
+    box.innerHTML = ''; d.results.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.className = 'hit';
+      b.textContent = [r.name, r.admin2, r.admin1].filter(Boolean).join(', '); b.onclick = () => { $('lat').value = r.latitude.toFixed(3); $('lon').value = r.longitude.toFixed(3); $('placeName').textContent = b.textContent; box.innerHTML = ''; }; box.appendChild(b); });
+  } catch (e) { box.innerHTML = 'Place search needs internet. Type latitude and longitude instead.'; }
+}
+function useMyLocation() {
+  if (!navigator.geolocation) { setMsg('Location is not available on this device.', true); return; }
+  navigator.geolocation.getCurrentPosition(p => { $('lat').value = p.coords.latitude.toFixed(3); $('lon').value = p.coords.longitude.toFixed(3); $('placeName').textContent = 'your location'; setMsg(''); },
+    () => setMsg('Could not get your location. Search for your town instead.', true), { timeout: 10000 });
+}
+function init() {
+  const fill = (id, obj) => { $(id).innerHTML = Object.keys(obj).map(k => `<option value="${k}">${obj[k].label}</option>`).join(''); };
+  const order = ['Cereals and millets', 'Pulses', 'Oilseeds', 'Cash crops', 'Vegetables', 'Fruit and plantation'];
+  $('crop').innerHTML = order.map(g => `<optgroup label="${g}">` + Object.keys(CROPS).filter(k => CROPS[k].group === g).map(k => `<option value="${k}">${CROPS[k].label}</option>`).join('') + '</optgroup>').join(''); fill('soil', SOILS); fill('method', METHODS); fill('mgmt', MGMT); $('soil').value = 'loam';
+  const t = todayStr(); $('sow').value = addDays(t, -60); $('lastWet').value = addDays(t, -14);
+  const cropInfo = () => { const c = CROPS[$('crop').value]; $('cropDays').value = c.days; $('cropNote').textContent = c.src;
+    $('sowBox').style.display = $('daysBox').style.display = c.perennial ? 'none' : '';
+    $('lblSow').textContent = c.paddy ? '3. Transplanting date (when the seedlings went into the field)' : '3. Sowing date';
+    $('lblWet').textContent = c.paddy ? 'When was the field last irrigated (flooded to about 5 cm)?' : 'When was the field last irrigated, or well soaked by rain?';
+    $('lblDays').textContent = c.paddy ? 'Days from transplanting to harvest (change for your variety)' : 'Days from sowing to harvest (change for your variety)';
+    $('methodBox').style.display = c.paddy ? 'none' : ''; $('mgmtBox').style.display = c.paddy ? '' : 'none'; };
+  $('crop').onchange = cropInfo; cropInfo();
+  $('go').onclick = () => run();
+  $('searchBtn').onclick = searchPlace; $('q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); searchPlace(); } });
+  $('locBtn').onclick = useMyLocation;
+}
+if (typeof document !== 'undefined' && document.getElementById('go')) init();
+
+</script>
+</body>
+</html>
